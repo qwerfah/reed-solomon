@@ -1,6 +1,7 @@
 pub mod field;
+pub mod field_element;
 
-use crate::field::field::*;
+use crate::field::GaloisField;
 
 fn main() {
     println!("Hello, world!");
