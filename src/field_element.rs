@@ -122,7 +122,7 @@ impl<'a> cmp::PartialEq<FieldElement<'a>> for FieldElement<'a> {
 #[cfg(test)]
 mod tests {
     use crate::field::GaloisField;
-    use crate::field_element::FieldElement;
+    use super::FieldElement;
 
     #[test]
     fn inverse_test() {
