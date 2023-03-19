@@ -39,17 +39,19 @@ jobs:
           args: --all -- --check
 
   clippy:
-    name: Clippy
+    name: Clippy (1.56.1)
+    timeout-minutes: 30
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
           components: clippy
-          override: true
-      - uses: actions-rs/clippy-check@v1
+          override: false
+      - name: Run clippy
+        uses: actions-rs/clippy-check@v1
         with:
+          name: Clippy (1.56.1)
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features
-          name: Clippy Output
+          args: --all-features --all-targets -- -D warnings
