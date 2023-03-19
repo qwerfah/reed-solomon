@@ -11,38 +11,41 @@ pub struct GaloisField {
     pub one: u64,
 }
 
-impl GaloisField {
-    pub fn predef() -> GaloisField {
-        GaloisField {
+#[macro_export]
+macro_rules! galois_field {
+    () => {
+        $crate::field::GaloisField {
             k_modulus: 3 * u64::pow(2, 30) + 1,
             generator_val: 5,
             zero: 0,
             one: 1,
         }
-    }
+    };
+}
 
-    pub fn new_element<'a>(&'a self, element_val: i128) -> FieldElement {
+impl GaloisField {
+    pub fn new_element(&self, element_val: i128) -> FieldElement {
         FieldElement {
             val: element_val.rem_euclid(self.k_modulus as i128) as u64,
             field: self,
         }
     }
 
-    pub fn zero<'a>(&'a self) -> FieldElement {
+    pub fn zero(&'_ self) -> FieldElement {
         FieldElement {
             val: self.zero,
             field: self,
         }
     }
 
-    pub fn one<'a>(&'a self) -> FieldElement {
+    pub fn one(&'_ self) -> FieldElement {
         FieldElement {
             val: self.one,
             field: self,
         }
     }
 
-    pub fn generator<'a>(&'a self) -> FieldElement {
+    pub fn generator(&'_ self) -> FieldElement {
         FieldElement {
             val: self.generator_val,
             field: self,
@@ -52,12 +55,11 @@ impl GaloisField {
 
 #[cfg(test)]
 mod tests {
-    use crate::field::GaloisField;
     use crate::field_element::FieldElement;
 
     #[test]
     fn init_test() {
-        let field = GaloisField::predef();
+        let field = galois_field!();
         assert_eq!(field.zero, 0);
         assert_eq!(field.one, 1);
         assert_eq!(field.k_modulus, 3 * u64::pow(2, 30) + 1);

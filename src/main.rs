@@ -3,12 +3,10 @@ pub mod field_element;
 pub mod polynomial;
 pub mod utils;
 
-use crate::field::GaloisField;
-
 fn main() {
     println!("Hello, world!");
 
-    let field = GaloisField::predef();
+    let field = crate::galois_field!();
 
     let el1 = field.new_element(10);
     let el2 = field.new_element(12);

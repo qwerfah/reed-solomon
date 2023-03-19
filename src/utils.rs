@@ -1,23 +1,24 @@
-use crate::field_element::FieldElement;
+use crate::{field::GaloisField, field_element::FieldElement};
 
 use itertools::{EitherOrBoth::*, Itertools};
 
 pub fn remove_trailing_elements<'a>(
-    coeffs: Vec<FieldElement<'a>>,
+    coeffs: &[FieldElement<'a>],
     trailing: FieldElement<'a>,
 ) -> Vec<FieldElement<'a>> {
     let mut filtered_coeffs = coeffs
-        .into_iter()
+        .iter()
         .rev()
-        .skip_while(|el| *el == trailing)
+        .skip_while(|&&el| el == trailing)
+        .copied()
         .collect::<Vec<FieldElement<'a>>>();
     filtered_coeffs.reverse();
     filtered_coeffs
 }
 
 pub fn zip_longest_with_op<'a>(
-    lhs: &Vec<FieldElement<'a>>,
-    rhs: &Vec<FieldElement<'a>>,
+    lhs: &[FieldElement<'a>],
+    rhs: &[FieldElement<'a>],
     op: fn(FieldElement<'a>, FieldElement<'a>) -> FieldElement<'a>,
     fill_value: FieldElement<'a>,
 ) -> Vec<FieldElement<'a>> {
@@ -29,4 +30,8 @@ pub fn zip_longest_with_op<'a>(
             Right(&r) => op(fill_value, r),
         })
         .collect()
+}
+
+pub fn nums_to_elements(nums: Vec<i128>, field: &GaloisField) -> Vec<FieldElement> {
+    nums.into_iter().map(|num| field.new_element(num)).collect()
 }

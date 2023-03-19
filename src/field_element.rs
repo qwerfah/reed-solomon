@@ -30,7 +30,7 @@ impl<'a> FieldElement<'a> {
 
         while n > 0 {
             if n % 2 != 0 {
-                res = res * cur_pow;
+                res *= cur_pow;
             }
             n /= 2;
             cur_pow *= cur_pow;
@@ -44,7 +44,7 @@ impl<'a> ops::Add<FieldElement<'a>> for FieldElement<'a> {
     type Output = FieldElement<'a>;
 
     fn add(self, rhs: FieldElement<'a>) -> Self::Output {
-        if self.field as *const _ == rhs.field as *const _ {
+        if std::ptr::eq(self.field, rhs.field) {
             FieldElement {
                 val: (self.val + rhs.val) % self.field.k_modulus,
                 field: self.field,
@@ -68,7 +68,7 @@ impl<'a> ops::Sub<FieldElement<'a>> for FieldElement<'a> {
     type Output = FieldElement<'a>;
 
     fn sub(self, rhs: FieldElement<'a>) -> Self::Output {
-        if self.field as *const _ == rhs.field as *const _ {
+        if std::ptr::eq(self.field, rhs.field) {
             self.field.new_element(self.val as i128 - rhs.val as i128)
         } else {
             panic!("Elements can't be substracted cause they lay in defferent fields");
@@ -80,7 +80,7 @@ impl<'a> ops::Mul<FieldElement<'a>> for FieldElement<'a> {
     type Output = FieldElement<'a>;
 
     fn mul(self, rhs: FieldElement<'a>) -> Self::Output {
-        if self.field as *const _ == rhs.field as *const _ {
+        if std::ptr::eq(self.field, rhs.field) {
             FieldElement {
                 val: (self.val * rhs.val) % self.field.k_modulus,
                 field: self.field,
@@ -93,7 +93,7 @@ impl<'a> ops::Mul<FieldElement<'a>> for FieldElement<'a> {
 
 impl<'a> ops::MulAssign<FieldElement<'a>> for FieldElement<'a> {
     fn mul_assign(&mut self, rhs: FieldElement<'a>) {
-        if self.field as *const _ == rhs.field as *const _ {
+        if std::ptr::eq(self.field, rhs.field) {
             self.val = (self.val * rhs.val) % self.field.k_modulus;
         } else {
             panic!("Elements can't be multiplied cause they lay in defferent fields");
@@ -101,11 +101,33 @@ impl<'a> ops::MulAssign<FieldElement<'a>> for FieldElement<'a> {
     }
 }
 
+impl<'a> ops::AddAssign<FieldElement<'a>> for FieldElement<'a> {
+    fn add_assign(&mut self, rhs: FieldElement<'a>) {
+        if std::ptr::eq(self.field, rhs.field) {
+            self.val = (self.val + rhs.val) % self.field.k_modulus;
+        } else {
+            panic!("Elements can't be multiplied cause they lay in defferent fields");
+        }
+    }
+}
+
+impl<'a> ops::SubAssign<FieldElement<'a>> for FieldElement<'a> {
+    fn sub_assign(&mut self, rhs: FieldElement<'a>) {
+        if std::ptr::eq(self.field, rhs.field) {
+            self.val = (self.val as i128 - rhs.val as i128).rem_euclid(self.field.k_modulus as i128)
+                as u64;
+        } else {
+            panic!("Elements can't be multiplied cause they lay in defferent fields");
+        }
+    }
+}
+
+#[allow(clippy::suspicious_arithmetic_impl)]
 impl<'a> ops::Div<FieldElement<'a>> for FieldElement<'a> {
     type Output = FieldElement<'a>;
 
     fn div(self, rhs: FieldElement<'a>) -> Self::Output {
-        if self.field as *const _ == rhs.field as *const _ {
+        if std::ptr::eq(self.field, rhs.field) {
             self * rhs.inverse()
         } else {
             panic!("Elements can't be divided cause they lay in defferent fields");
@@ -115,19 +137,19 @@ impl<'a> ops::Div<FieldElement<'a>> for FieldElement<'a> {
 
 impl<'a> cmp::PartialEq<FieldElement<'a>> for FieldElement<'a> {
     fn eq(&self, other: &FieldElement<'a>) -> bool {
-        self.field as *const _ == other.field as *const _ && self.val == other.val
+        std::ptr::eq(self.field, other.field) && self.val == other.val
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::field::GaloisField;
     use super::FieldElement;
+    use crate::field::GaloisField;
+
+    const FIELD: GaloisField = crate::galois_field!();
 
     #[test]
     fn inverse_test() {
-        let field = GaloisField::predef();
-
         let test_data = [
             (10, 966367642),
             (60, 1234803098),
@@ -152,8 +174,8 @@ mod tests {
         ];
 
         for (el_val, inverse_val) in test_data {
-            let element = field.new_element(el_val);
-            let inverse_element = field.new_element(inverse_val);
+            let element = FIELD.new_element(el_val);
+            let inverse_element = FIELD.new_element(inverse_val);
 
             assert_eq!(element.inverse(), inverse_element);
         }
@@ -161,8 +183,6 @@ mod tests {
 
     #[test]
     fn pow_test() {
-        let field = GaloisField::predef();
-
         let test_data = [
             (-2437383495, 81, 3187458499),
             (-2661509949, 88, 999582370),
@@ -187,14 +207,12 @@ mod tests {
         ];
 
         for (el_val, pow, pow_val) in test_data {
-            assert_eq!(field.new_element(el_val).pow(pow).val, pow_val);
+            assert_eq!(FIELD.new_element(el_val).pow(pow).val, pow_val);
         }
     }
 
     #[test]
     fn sum_test() {
-        let field = GaloisField::predef();
-
         let test_data = [
             (-2674122163, -2977635245, 790693538),
             (2576410027, 2304397362, 1659581916),
@@ -219,16 +237,14 @@ mod tests {
         ];
 
         for (lhs_val, rhs_val, sum_val) in test_data {
-            let lhs = field.new_element(lhs_val);
-            let rhs = field.new_element(rhs_val);
+            let lhs = FIELD.new_element(lhs_val);
+            let rhs = FIELD.new_element(rhs_val);
             assert_eq!((lhs + rhs).val, sum_val);
         }
     }
 
     #[test]
     fn sub_test() {
-        let field = GaloisField::predef();
-
         let test_data = [
             (-1086477693, -2867903489, 1781425796),
             (1462968467, 2104794817, 2579399123),
@@ -253,16 +269,14 @@ mod tests {
         ];
 
         for (lhs_val, rhs_val, sub_val) in test_data {
-            let lhs = field.new_element(lhs_val);
-            let rhs = field.new_element(rhs_val);
+            let lhs = FIELD.new_element(lhs_val);
+            let rhs = FIELD.new_element(rhs_val);
             assert_eq!((lhs - rhs).val, sub_val);
         }
     }
 
     #[test]
     fn neg_test() {
-        let field = GaloisField::predef();
-
         let test_data = [
             (513023168, 2708202305),
             (-1567894667, 1567894667),
@@ -287,14 +301,12 @@ mod tests {
         ];
 
         for (el_val, neg_val) in test_data {
-            assert_eq!((-field.new_element(el_val)).val, neg_val);
+            assert_eq!((-FIELD.new_element(el_val)).val, neg_val);
         }
     }
 
     #[test]
     fn mul_test() {
-        let field = GaloisField::predef();
-
         let test_data = [
             (-3217314898, 1575806093, 503069339),
             (2848844329, 2969028563, 1187663836),
@@ -319,16 +331,14 @@ mod tests {
         ];
 
         for (lhs_val, rhs_val, mul_val) in test_data {
-            let lhs = field.new_element(lhs_val);
-            let rhs = field.new_element(rhs_val);
+            let lhs = FIELD.new_element(lhs_val);
+            let rhs = FIELD.new_element(rhs_val);
             assert_eq!((lhs * rhs).val, mul_val);
         }
     }
 
     #[test]
     fn div_test() {
-        let field = GaloisField::predef();
-
         let test_data = [
             (-408821234, -2199589188, 811607262),
             (2160990732, 2051454364, 727573819),
@@ -353,21 +363,20 @@ mod tests {
         ];
 
         for (lhs_val, rhs_val, div_val) in test_data {
-            let lhs = field.new_element(lhs_val);
-            let rhs = field.new_element(rhs_val);
+            let lhs = FIELD.new_element(lhs_val);
+            let rhs = FIELD.new_element(rhs_val);
             assert_eq!((lhs / rhs).val, div_val);
         }
     }
 
     #[test]
     fn expr_test() {
-        let field = GaloisField::predef();
-        let element = field.new_element(2).pow(30) * field.new_element(3) + field.new_element(1);
+        let element = FIELD.new_element(2).pow(30) * FIELD.new_element(3) + FIELD.new_element(1);
         assert_eq!(
             element,
             FieldElement {
                 val: 0,
-                field: &field
+                field: &FIELD
             }
         );
     }
